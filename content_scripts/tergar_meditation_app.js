@@ -100,7 +100,7 @@ $("#blurNotes .col-xs-12.col-sm-5.col-md-4").find("div[data-id]").first().childr
     }
 
     browser.runtime.onMessage.addListener((message) => {
-        if (message.command === "execute") {
+        if (message.command === "scrape_and_store") {
             scrapeStoreAndNotifyBackend(pageScrapeFunction, STORAGE_KEY, FILENAME)
                 .catch(reportError);
         } else {

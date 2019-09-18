@@ -15,7 +15,10 @@
     "activeTab",
     "storage",
     "tabs",
-    "downloads"
+    "downloads",
+    "webRequest",
+    "<all_urls>",
+    "webRequestBlocking"
   ],
 
   "background": {
