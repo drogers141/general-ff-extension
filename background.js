@@ -108,6 +108,18 @@ function reportError(error) {
     console.error(`background.js error: ${error}`);
 }
 
+function checkStorage() {
+    console.log(`checking storage: ${MEDITATION_API_FETCH_KEY}`);
+    browser.storage.local.get(MEDITATION_API_FETCH_KEY)
+        .then(function(apiFetched) {
+            console.log("whole object:");
+            console.log(apiFetched);
+            console.log(JSON.stringify(apiFetched, null, 2));
+            console.log(`url: ${apiFetched[MEDITATION_API_FETCH_KEY]["url"]}`);
+            console.log(`fetchBody: ${apiFetched[MEDITATION_API_FETCH_KEY]["fetchBody"]}`);
+        })
+}
+
 function handleMessages(message) {
     if (message.target === "background") {
         if (message.command === "download_stored_object") {
@@ -128,11 +140,14 @@ function handleMessages(message) {
                 })
                 .catch(reportError);
         } else if (message.command === "fetch_meditation_logs") {
+            // checkStorage();
             browser.storage.local.get(MEDITATION_API_FETCH_KEY)
                 .then((meditationAPIFetch) => {
-                    console.log(`background retrieved storage: ${MEDITATION_API_FETCH_KEY}`);
-                    console.log(`fetch url: ${meditationAPIFetch["url"]}\nfetchBody:\n${JSON.parse(JSON.stringify(meditationAPIFetch))}`);
-                    fetch(meditationAPIFetch.url, meditationAPIFetch.fetchBody)
+                    console.log(`background retrieved storage for key: ${MEDITATION_API_FETCH_KEY}`);
+                    console.log(JSON.stringify(meditationAPIFetch, null, 2));
+                    console.log(`fetching: ${meditationAPIFetch[MEDITATION_API_FETCH_KEY]["url"]}`);
+                    fetch(meditationAPIFetch[MEDITATION_API_FETCH_KEY]["url"],
+                        meditationAPIFetch[MEDITATION_API_FETCH_KEY]["fetchBody"])
                         .then((response) => {
                             return response.json();
                         }).then((meditationJson) => {
