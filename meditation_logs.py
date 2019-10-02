@@ -8,6 +8,8 @@ import os
 import sys
 import glob
 
+def meditation_log_files():
+    return glob.glob(os.path.expanduser("~/Downloads/tergar-meditation-logs-20*.json"))
 
 def hours_minutes_seconds(seconds):
     (mins, secs) = divmod(seconds, 60)
@@ -81,8 +83,16 @@ class MeditationLogs:
         return "\n".join([header, overall])
 
 
+
+def clean_up_old_files():
+    log_files = meditation_log_files()
+    if len(log_files) > 1:
+        for i, f in enumerate(sorted(log_files)[:-1]):
+            os.remove(f)
+        print("removed old files: {}".format(i+1))
+
 def latest_log():
-    log_files = glob.glob(os.path.expanduser("~/Downloads/tergar-meditation-logs-20*.json"))
+    log_files = meditation_log_files()
     if log_files:
         return sorted(log_files)[-1]
 
@@ -93,6 +103,7 @@ if __name__ == "__main__":
     if not log_file:
         print("No downloaded logs in ~/Downloads")
         exit(0)
+    clean_up_old_files()
     print("meditation log file: {}\n".format(log_file))
 
     ml = MeditationLogs(log_file)
