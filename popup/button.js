@@ -14,24 +14,24 @@ function listenForClicks() {
       // // alert("Got click");
       // browser.tabs.sendMessage(tabs[0].id, {
       //   command: "scrape_and_store"
-      // });
+      //
       // console.log("sent scrape_and_store command");
     }
 
-    function reportError(error) {
-      console.error(`Could not send message: ${error}`);
-    }
+    // if (e.target.classList.contains("button")) {
+    //   handleClick();
+    // }
 
     if (e.target.classList.contains("button")) {
-      handleClick();
+      browser.tabs.query({active: true, currentWindow: true})
+          .then(handleClick)
+          .catch(reportError);
     }
-
-    // if (e.target.classList.contains("button")) {
-    //   browser.tabs.query({active: true, currentWindow: true})
-    //       .then(handleClick)
-    //       .catch(reportError);
-    // }
   });
+}
+
+function reportError(error) {
+  console.error(`Could not send message: ${error}`);
 }
 
 /**
