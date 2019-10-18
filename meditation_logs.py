@@ -45,6 +45,9 @@ class MeditationLogs:
         self.buckets["jol3-by-week"] = {}
         for bucket in ("W1", "W2", "W3", "W4", "W5", "W6"):
             self.buckets["jol3-by-week"][bucket] = [e for e in self.buckets["jol3"] if e.get("notes") and bucket in e["notes"]]
+        # Dying Every Day Course
+        self.buckets["ded"] = [e for e in self.buckets["custom"] if e.get("notes") and "DED" in e["notes"]]
+
 
     @classmethod
     def total_duration_seconds(cls, bucket):
@@ -82,6 +85,12 @@ class MeditationLogs:
             format_time(MeditationLogs.total_duration_seconds(self.all_entries)))
         return "\n".join([header, overall])
 
+    def ded_stats_string(self):
+        header = "DED Meditation"
+        overall = "Total sessions: {}, Total Time: {}".format(
+            len(self.buckets["ded"]),
+            format_time(MeditationLogs.total_duration_seconds(self.buckets["ded"])))
+        return "\n".join([header, overall])
 
 
 def clean_up_old_files():
@@ -107,4 +116,4 @@ if __name__ == "__main__":
     print("meditation log file: {}\n".format(log_file))
 
     ml = MeditationLogs(log_file)
-    print("{}\n\n{}\n".format(ml.jol3_stats_string(), ml.overall_stats_string()))
+    print("{}\n\n{}\n\n{}\n".format(ml.jol3_stats_string(), ml.ded_stats_string(), ml.overall_stats_string()))
