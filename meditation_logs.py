@@ -38,16 +38,15 @@ class MeditationLogs:
     def bucket_entries(self):
         # jol3 and not-jol3 should partition the complete set of logs
         self.buckets["jol3"] = [e for e in self.all_entries if e["course"]["code"] == "JOL3"]
-        self.buckets["not-jol3"] = [e for e in self.all_entries if e["course"]["code"] == "JOL3"]
-        self.buckets["custom"] = [e for e in self.all_entries if e["course"]["code"] == "JOL3"]
+        self.buckets["not-jol3"] = [e for e in self.all_entries if e["course"]["code"] != "JOL3"]
+        self.buckets["custom"] = [e for e in self.all_entries if e["course"]["code"] == "CUSTOM"]
         # these buckets are based on my convention of putting W1 through W6 for the week of the course
         # and therefore the different meditations since each week introduced a new method
         self.buckets["jol3-by-week"] = {}
         for bucket in ("W1", "W2", "W3", "W4", "W5", "W6"):
             self.buckets["jol3-by-week"][bucket] = [e for e in self.buckets["jol3"] if e.get("notes") and bucket in e["notes"]]
         # Dying Every Day Course
-        self.buckets["ded"] = [e for e in self.buckets["custom"] if e.get("notes") and "DED" in e["notes"]]
-
+        self.buckets["ded"] = [e for e in self.all_entries if e.get("notes") and "DED" in e["notes"]]
 
     @classmethod
     def total_duration_seconds(cls, bucket):
