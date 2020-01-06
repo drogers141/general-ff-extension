@@ -7,6 +7,8 @@ import json
 import os
 import sys
 import glob
+import re
+import argparse
 
 def meditation_log_files():
     return glob.glob(os.path.expanduser("~/Downloads/tergar-meditation-logs-20*.json"))
@@ -48,6 +50,17 @@ class MeditationLogs:
         # Dying Every Day Course
         self.buckets["ded"] = [e for e in self.all_entries if e.get("notes") and "DED" in e["notes"]]
 
+    def search_notes(self, regexp, return_full_entries=False):
+        """Return notes matching regex search (case insensitive, multiline)
+        return_full_entries - if True return the full log entries
+        Default - returns a list of the "notes" key value of the entry dicts
+        """
+        regex = re.compile(regexp, re.I | re.DOTALL)
+        if return_full_entries:
+            return [e for e in self.all_entries if e.get("notes") and regex.search(e.get("notes"))]
+        return [e.get("notes") for e in self.all_entries if e.get("notes") and regex.search(e.get("notes"))]
+
+
     @classmethod
     def total_duration_seconds(cls, bucket):
         elapsed_list = [e.get("elapsed") for e in bucket]
@@ -58,6 +71,22 @@ class MeditationLogs:
     def most_recent(cls, bucket):
         if len(bucket) > 0:
             return bucket[-1]
+
+    @classmethod
+    def format_log(cls, entry):
+        """Return pretty string of log entry"""
+        course = entry.get("course", {}).get("code", "n/a")
+        str_list = [
+            "{:<21}{:>7}{:>10}{:>10}".format(entry.get("dateString"), format_time(entry.get("elapsed", 0)), course, entry.get("id")),
+            "{}".format(entry.get("notes")),
+            # "id: {}  duration: {}  course: {}".format(entry.get("id"), format_time(entry.get("elapsed", 0)), course),
+            # "date: {}".format(entry.get("dateString")),
+            # "duration: {}".format(format_time(entry.get("elapsed", 0))),
+            # "course: {}".format(course),
+            # "notes: {}".format(entry.get("notes")),
+            ""
+        ]
+        return '\n'.join(str_list)
 
     # returns (week name, number of entries, total seconds of meditation for that week) for each week
     def jol3_by_week_totals(self):
@@ -99,6 +128,7 @@ def clean_up_old_files():
             os.remove(f)
         print("removed old files: {}".format(i+1))
 
+
 def latest_log():
     log_files = meditation_log_files()
     if log_files:
@@ -106,6 +136,12 @@ def latest_log():
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--search", help='search log notes for case-insensitive regex')
+    parser.add_argument("-f", "--full-logs", help='with -s, --search - print full logs rather than just notes',
+                        action="store_true")
+    args = parser.parse_args()
 
     log_file = latest_log()
     if not log_file:
@@ -115,4 +151,18 @@ if __name__ == "__main__":
     print("meditation log file: {}\n".format(log_file))
 
     ml = MeditationLogs(log_file)
-    print("{}\n\n{}\n\n{}\n".format(ml.jol3_stats_string(), ml.ded_stats_string(), ml.overall_stats_string()))
+    if args.search:
+        if args.full_logs:
+            logs = ml.search_notes(args.search, True)
+            print("{} logs found\n".format(len(logs)))
+            print("{:^21}{:7}{:>9}{:>8}\n{}\n".format("Date", "Duration", "Course", "ID", "-" * 50))
+            for log in logs:
+                print(MeditationLogs.format_log(log))
+            total_duration = sum(e.get("elapsed", 0) for e in logs)
+            print("Total Duration:  {}\n".format(format_time(total_duration)))
+        else:
+            notes = ml.search_notes(args.search)
+            print("{} logs found\n".format(len(notes)))
+            print('\n'.join(notes))
+    else:
+        print("{}\n\n{}\n\n{}\n".format(ml.jol3_stats_string(), ml.ded_stats_string(), ml.overall_stats_string()))
