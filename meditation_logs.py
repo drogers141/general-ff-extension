@@ -10,8 +10,20 @@ import glob
 import re
 import argparse
 
-def meditation_log_files():
-    return glob.glob(os.path.expanduser("~/Downloads/tergar-meditation-logs-20*.json"))
+DOWNLOAD_DIR = os.path.expanduser("~/Downloads")
+TERGAR_DATA_DIR = os.path.expanduser("~/Dropbox/data/tergar")
+
+def stored_meditation_log_files():
+    return glob.glob(os.path.join(TERGAR_DATA_DIR, "tergar-meditation-logs-20*.json"))
+
+def move_downloaded_log_files_to_storage():
+    log_files = glob.glob(os.path.join(DOWNLOAD_DIR, "tergar-meditation-logs-20*.json"))
+    for f in log_files:
+        new_name = f.replace(DOWNLOAD_DIR, TERGAR_DATA_DIR)
+        print(f"moving file from {f} to {new_name}")
+        os.rename(f, new_name)
+
+
 
 def hours_minutes_seconds(seconds):
     (mins, secs) = divmod(seconds, 60)
@@ -122,15 +134,16 @@ class MeditationLogs:
 
 
 def clean_up_old_files():
-    log_files = meditation_log_files()
-    if len(log_files) > 1:
-        for i, f in enumerate(sorted(log_files)[:-1]):
+    """Save 2 most recent meditation log files"""
+    log_files = stored_meditation_log_files()
+    if len(log_files) > 2:
+        for i, f in enumerate(sorted(log_files)[:-2]):
             os.remove(f)
         print("removed old files: {}".format(i+1))
 
 
 def latest_log():
-    log_files = meditation_log_files()
+    log_files = stored_meditation_log_files()
     if log_files:
         return sorted(log_files)[-1]
 
@@ -143,6 +156,7 @@ if __name__ == "__main__":
                         action="store_true")
     args = parser.parse_args()
 
+    move_downloaded_log_files_to_storage()
     log_file = latest_log()
     if not log_file:
         print("No downloaded logs in ~/Downloads")
