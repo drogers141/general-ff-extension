@@ -61,6 +61,14 @@ class MeditationLogs:
             self.buckets["jol3-by-week"][bucket] = [e for e in self.buckets["jol3"] if e.get("notes") and bucket in e["notes"]]
         # Dying Every Day Course
         self.buckets["ded"] = [e for e in self.all_entries if e.get("notes") and "DED" in e["notes"]]
+        # Awakening in Daily Life Course
+        self.buckets["adl"] = [e for e in self.all_entries if e.get("notes") and "ADL" in e["notes"]]
+        # Dying and Awakening Course - DOA nickname
+        self.buckets["doa"] = [e for e in self.all_entries if e.get("notes") and "DOA" in e["notes"]]
+
+        self.buckets["not-any-course"] = [entry for entry in self.all_entries
+                                          if entry in self.buckets["custom"] and not
+                                          entry in self.buckets["ded"] + self.buckets["adl"] + self.buckets["doa"]]
 
     def search_notes(self, regexp, return_full_entries=False):
         """Return notes matching regex search (case insensitive, multiline)
@@ -71,6 +79,13 @@ class MeditationLogs:
         if return_full_entries:
             return [e for e in self.all_entries if e.get("notes") and regex.search(e.get("notes"))]
         return [e.get("notes") for e in self.all_entries if e.get("notes") and regex.search(e.get("notes"))]
+
+    def search_notes_in_bucket(self, regexp, bucket_name, return_full_entries=False):
+        regex = re.compile(regexp, re.I | re.DOTALL)
+        if return_full_entries:
+            return [e for e in self.buckets[bucket_name] if e.get("notes") and regex.search(e.get("notes"))]
+        return [e.get("notes") for e in self.buckets[bucket_name]
+                if e.get("notes") and regex.search(e.get("notes"))]
 
 
     @classmethod
@@ -125,12 +140,21 @@ class MeditationLogs:
             format_time(MeditationLogs.total_duration_seconds(self.all_entries)))
         return "\n".join([header, overall])
 
-    def ded_stats_string(self):
-        header = "DED Meditation"
+    def other_bucketed_entries_stats_string(self, header, bucket):
         overall = "Total sessions: {}, Total Time: {}".format(
-            len(self.buckets["ded"]),
-            format_time(MeditationLogs.total_duration_seconds(self.buckets["ded"])))
+            len(bucket),
+            format_time(MeditationLogs.total_duration_seconds(bucket)))
         return "\n".join([header, overall])
+
+    def ded_stats_string(self):
+        return self.other_bucketed_entries_stats_string(header="DED Meditation", bucket=self.buckets["ded"])
+
+    def adl_stats_string(self):
+        return self.other_bucketed_entries_stats_string(header="ADL Meditation", bucket=self.buckets["adl"])
+
+    def doa_stats_string(self):
+        return self.other_bucketed_entries_stats_string(header="DOA Meditation", bucket=self.buckets["doa"])
+
 
 
 def clean_up_old_files():
@@ -154,6 +178,10 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--search", help='search log notes for case-insensitive regex')
     parser.add_argument("-f", "--full-logs", help='with -s, --search - print full logs rather than just notes',
                         action="store_true")
+    parser.add_argument("-b", "--search-bucket", help="search a single bucket of logs with case-insensitive regex." +
+                        " SEARCH_BUCKET is a bucket name")
+    parser.add_argument("-l", "--list-buckets", help="list available bucket names to search",
+                        action="store_true")
     args = parser.parse_args()
 
     move_downloaded_log_files_to_storage()
@@ -165,7 +193,22 @@ if __name__ == "__main__":
     print("meditation log file: {}\n".format(log_file))
 
     ml = MeditationLogs(log_file)
-    if args.search:
+    if args.search_bucket:
+        print(f"search_bucket: {args.search_bucket}")
+        if args.full_logs:
+            logs = ml.search_notes_in_bucket(args.search, args.search_bucket, True)
+            print("Bucket: {}\n{} logs found\n".format(args.search_bucket, len(logs)))
+            print("{:^21}{:7}{:>9}{:>8}\n{}\n".format("Date", "Duration", "Course", "ID", "-" * 50))
+            for log in logs:
+                print(MeditationLogs.format_log(log))
+            total_duration = sum(e.get("elapsed", 0) for e in logs)
+            print("Total Duration:  {}\n".format(format_time(total_duration)))
+        else:
+            notes = ml.search_notes_in_bucket(args.search, args.search_bucket)
+            print("Bucket: {}\n{} logs found\n".format(args.search_bucket, len(notes)))
+            print('\n'.join(notes))
+        exit(0)
+    elif args.search:
         if args.full_logs:
             logs = ml.search_notes(args.search, True)
             print("{} logs found\n".format(len(logs)))
@@ -178,5 +221,23 @@ if __name__ == "__main__":
             notes = ml.search_notes(args.search)
             print("{} logs found\n".format(len(notes)))
             print('\n'.join(notes))
+        exit(0)
+    elif args.list_buckets:
+        print(", ".join(ml.buckets.keys()))
+        exit(0)
     else:
-        print("{}\n\n{}\n\n{}\n".format(ml.jol3_stats_string(), ml.ded_stats_string(), ml.overall_stats_string()))
+        print("{}\n\n{}\n\n{}\n\n{}\n\n{}\n".format(ml.jol3_stats_string(),
+                                                    ml.ded_stats_string(),
+                                                    ml.adl_stats_string(),
+                                                    ml.doa_stats_string(),
+                                                    ml.overall_stats_string()))
+
+    print("Other stats:\n")
+    non_jol3_stats = ml.other_bucketed_entries_stats_string("Non-JOL3", ml.buckets["not-jol3"])
+    custom_stats = ml.other_bucketed_entries_stats_string("CUSTOM", ml.buckets["custom"])
+    custom_not_any_course_stats = ml.other_bucketed_entries_stats_string("CUSTOM and not in any course",
+                                                                         ml.buckets["not-any-course"])
+    print("{}\n\n{}\n\n{}\n".format(non_jol3_stats, custom_stats, custom_not_any_course_stats))
+
+
+
